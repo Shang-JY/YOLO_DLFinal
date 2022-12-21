@@ -55,13 +55,6 @@ class VOCDataset(data.Dataset):
         self.image_size =image_size
         self.info = defaultdict(list)
 
-        if isinstance(list_file, list):
-            # Cat multiple list files together.
-            # This is especially useful for voc07/voc12 combination.
-            tmp_file = '/tmp/listfile.txt'
-            os.system('cat %s > %s' % (' '.join(list_file), tmp_file))
-            list_file = tmp_file
-
         with open(list_file) as f:
             lines  = f.readlines()
 
@@ -95,11 +88,11 @@ class VOCDataset(data.Dataset):
         h,w ,_= img.shape
         boxes /= torch.Tensor([w,h,w,h]).expand_as(boxes)
 
-        target = self.make_target(labels,boxes)
-        target = torch.tensor(target).float()
+        target = self.encoder(boxes, labels)
+        # target = torch.tensor(target).float()
 
         img = self.BGR2RGB(img) #because pytorch pretrained model use RGB
-
+        img = self.subMean(img, self.mean)
         img = cv2.resize(img,(self.image_size,self.image_size))
 
         if self.transform is not None:
@@ -127,73 +120,25 @@ class VOCDataset(data.Dataset):
     def __len__(self):
         return self.num_samples
     
-    def change_box_to_center_axes(self, bboxes):
-        rebboxes = []
-        for bbox in bboxes:
-            x_center, y_center = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
-            width, height = (bbox[0] - bbox[2]), (bbox[1] - bbox[3])
-            rebboxes.append([x_center, y_center, width, height])
-        return rebboxes
-
-    def make_target(self, labels, bboxes):
-        """make location np.ndarray from bboxes of an image
-        
-        Input
-        ----------
-        labels : list
-            [0, 1, 4, 2, ...]
-            labels of each bboxes
-        bboxes : list
-            [[x_center, y_center, width, height], ...]
-        
-        Returns
-        -------
-        np.ndarray
-            [self.S, self.S, self.B*5+self.C]
-        """
-
-        bboxes = self.change_box_to_center_axes(bboxes)
-        num_elements = self.B*5 + self.C
-        num_bboxes = len(bboxes)
-        
-        # for excetion: num of bboxes is zero
-        if num_bboxes == 0:
-            return np.zeros((self.S, self.S, num_elements))
-
-        labels = np.array(labels, dtype=np.int)
-        bboxes = np.array(bboxes, dtype=np.float)
-
-        np_target = np.zeros((self.S, self.S, num_elements))
-        np_class = np.zeros((num_bboxes, self.C))
-
-        for i in range(num_bboxes):
-            np_class[i, labels[i]] = 1
-
-        x_center = bboxes[:, 0].reshape(-1, 1)
-        y_center = bboxes[:, 1].reshape(-1, 1)
-        w = bboxes[:, 2].reshape(-1, 1)
-        h = bboxes[:, 3].reshape(-1, 1)
-
-        x_idx = np.ceil(x_center * self.S) - 1 # 看这个bounding box 在哪个grid 里面
-        y_idx = np.ceil(y_center * self.S) - 1
-        # for exception 0, ceil(0)-1 = -1
-        x_idx[x_idx<0] = 0 
-        y_idx[y_idx<0] = 0
-
-        # calc offset of x_center, y_center
-        x_center = x_center - x_idx/self.S - 1/(2*self.S)
-        y_center = y_center - y_idx/self.S - 1/(2*self.S)
-
-        conf = np.ones_like(x_center)
-
-        temp = np.concatenate([x_center, y_center, w, h, conf], axis=1)
-        temp = np.repeat(temp, self.B, axis=0).reshape(num_bboxes, -1)
-        temp = np.concatenate([temp, np_class], axis=1)
-
-        for i in range(num_bboxes):
-            np_target[int(y_idx[i]), int(x_idx[i])] = temp[i]
-
-        return np_target
+    def encoder(self, boxes, labels):
+        grid_num = 14
+        target = torch.zeros((grid_num, grid_num, 30))
+        cell_size = 1. / grid_num
+        wh = boxes[:, 2:] - boxes[:, :2]
+        cxcy = (boxes[:, 2:] + boxes[:, :2]) / 2
+        for i in range(cxcy.size()[0]):
+            cxcy_sample = cxcy[i]
+            ij = (cxcy_sample / cell_size).ceil() - 1
+            target[int(ij[1]), int(ij[0]), 4] = 1
+            target[int(ij[1]), int(ij[0]), 9] = 1
+            target[int(ij[1]), int(ij[0]), int(labels[i]) + 9] = 1
+            xy = ij * cell_size
+            delta_xy = (cxcy_sample - xy) / cell_size
+            target[int(ij[1]), int(ij[0]), 2:4] = wh[i]
+            target[int(ij[1]), int(ij[0]), :2] = delta_xy
+            target[int(ij[1]), int(ij[0]), 7:9] = wh[i]
+            target[int(ij[1]), int(ij[0]), 5:7] = delta_xy
+        return target
     
 
     def BGR2RGB(self,img):

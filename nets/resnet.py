@@ -6,16 +6,13 @@ import torch
 import torchvision.models as models
 from torch.autograd import Variable
 
-__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
-           'resnet152']
+__all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50']
 
 
 model_urls = {
     'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
     'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
-    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
-    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth'
 }
 
 
@@ -134,14 +131,16 @@ class ResNet(nn.Module):
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64)
         self.relu = nn.ReLU(inplace=True)
+
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
         self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
         # self.layer5 = self._make_layer(block, 512, layers[3], stride=2)
         self.layer5 = self._make_detnet_layer(in_channels=2048)
-        self.avgpool = nn.AvgPool2d(2) #fit 448 input size
+        # self.avgpool = nn.AvgPool2d(2) #fit 448 input size
         # self.fc = nn.Linear(512 * block.expansion, num_classes)
         self.conv_end = nn.Conv2d(256, 30, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn_end = nn.BatchNorm2d(30)
@@ -189,7 +188,7 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.layer5(x)
-        x = self.avgpool(x)
+        # x = self.avgpool(x)
         # x = x.view(x.size(0), -1)
         # x = self.fc(x)
         x = self.conv_end(x)
@@ -224,7 +223,7 @@ def resnet34(pretrained=False, **kwargs):
     if pretrained:
         model.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
     return model
-    
+
 
 def resnet50(pretrained=False, **kwargs):
     """Constructs a ResNet-50 model.
