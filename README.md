@@ -1,6 +1,6 @@
-# YOLO_DLFinal
+# YOLOv1_DLFinal
 
-Hello everyone, this is my repo for YOLO DL-Final-Project. In this project, we started with replacing the backbone network with VGG-16, modified and tested it gradually, and replace the backbone network as resnet50 to train on VOC2007 and VOC2012 datasets. The final model has 26M parameters and achieve over 64% mAP.
+Hello everyone, this is my repo for YOLOv1 DL-Final-Project. In this project, we started with replacing the backbone network with VGG-16, modified and tested it gradually, and replace the backbone network as resnet50 to train on VOC2007 and VOC2012 datasets. The final model has 26M parameters and achieve over 64% mAP.
 
 In this repository.
 
