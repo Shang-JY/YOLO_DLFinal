@@ -21,9 +21,9 @@ The settings and accuracies of each model are as follows. We changed, the type o
 
 | Name      | # params| Test acc |
 |-----------|--------:|:-----------------:|
-|VGG16      | 123M   | 63%|
-|ResNet50   |  26M   | 64%|
-|ResNet50v  |  26M   | 64%|
+|VGG16      | 123.51M   | 63.3%|
+|ResNet50   |  ~26M   | 64.4%|
+|ResNet50v  |  26.73M   | 64.9%|
 
 
 If you have any questions, please contact me.
